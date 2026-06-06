@@ -1,14 +1,26 @@
 [profile.default]
+auto_detect_solc = true
+offline = false
 bytecode_hash = "none"
 evm_version = "cancun"
 ffi = true
 fs_permissions = [{access = "read-write", path = ".forge-snapshots/"}]
 libs = ["lib"]
 out = "out"
-solc_version = "0.8.30"
+solc = "0.8.26"
 src = "src"
 via_ir = false
 
 [lint]
 exclude_lints = ["screaming-snake-case-immutable", "screaming-snake-case-const"]
 lint_on_build = false
+
+[profile.default.invariant]
+runs = 256
+depth = 25
+fail_on_revert = true
+
+[rpc_endpoints]
+sepolia = "${ALCHEMY_API_KEY}"
+
+

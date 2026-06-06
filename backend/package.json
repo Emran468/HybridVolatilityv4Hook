@@ -1,0 +1,22 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Uniswap V4 Hook Backend for Sepolia Testnet",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "init-pool": "node initialize-pool.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["uniswap", "v4", "hook", "sepolia", "defi"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@uniswap/v4-sdk": "^2.1.1",
+    "cors": "^2.8.6",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1"
+  }
+}

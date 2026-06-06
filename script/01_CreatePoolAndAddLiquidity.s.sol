@@ -1,86 +1,53 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {CurrencyLibrary, Currency} from "@uniswap/v4-core/src/types/Currency.sol";
-import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
-import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
-import {BaseScript} from "./base/BaseScript.sol";
-import {LiquidityHelpers} from "./base/LiquidityHelpers.sol";
+contract CreatePoolAndAddLiquidity is Script {
+    using PoolIdLibrary for PoolKey;
 
-contract CreatePoolAndAddLiquidityScript is BaseScript, LiquidityHelpers {
-    using CurrencyLibrary for Currency;
-
-    /////////////////////////////////////
-    // --- Configure These ---
-    /////////////////////////////////////
-
-    uint24 lpFee = 3000; // 0.30%
-    int24 tickSpacing = 60;
-    uint160 startingPrice = 2 ** 96; // Starting price, sqrtPriceX96; floor(sqrt(1) * 2^96)
-
-    // --- liquidity position configuration --- //
-    uint256 public token0Amount = 100e18;
-    uint256 public token1Amount = 100e18;
-
-    // range of the position, must be a multiple of tickSpacing
-    int24 tickLower;
-    int24 tickUpper;
-    /////////////////////////////////////
-
-    function run() external {
+    function run() public {
+        address poolManagerAddress = 0x8C4BcBE6b9eF47855f97E675296FA3F6fafa5F1A;
+        address hookAddress = 0x88Bb6571DB4f0eb66831E1De0804D033686ab0c0;
+        address eurc = 0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8;
+        address weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
+        
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        
+        vm.startBroadcast(deployerPrivateKey);
+        
+        // Sort tokens
+        address token0 = eurc < weth ? eurc : weth;
+        address token1 = eurc < weth ? weth : eurc;
+        
+        // Create Pool Key
         PoolKey memory poolKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: lpFee,
-            tickSpacing: tickSpacing,
-            hooks: hookContract
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(hookAddress)
         });
-
-        bytes memory hookData = new bytes(0);
-
-        int24 currentTick = TickMath.getTickAtSqrtPrice(startingPrice);
-
-        tickLower = truncateTickSpacing((currentTick - 750 * tickSpacing), tickSpacing);
-        tickUpper = truncateTickSpacing((currentTick + 750 * tickSpacing), tickSpacing);
-
-        // Converts token amounts to liquidity units
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            startingPrice,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
-            token0Amount,
-            token1Amount
-        );
-
-        // slippage limits
-        uint256 amount0Max = token0Amount + 1;
-        uint256 amount1Max = token1Amount + 1;
-
-        (bytes memory actions, bytes[] memory mintParams) = _mintLiquidityParams(
-            poolKey, tickLower, tickUpper, liquidity, amount0Max, amount1Max, deployerAddress, hookData
-        );
-
-        // multicall parameters
-        bytes[] memory params = new bytes[](2);
-
-        // Initialize Pool
-        params[0] = abi.encodeWithSelector(positionManager.initializePool.selector, poolKey, startingPrice, hookData);
-
-        // Mint Liquidity
-        params[1] = abi.encodeWithSelector(
-            positionManager.modifyLiquidities.selector, abi.encode(actions, mintParams), block.timestamp + 3600
-        );
-
-        // If the pool is an ETH pair, native tokens are to be transferred
-        uint256 valueToPass = currency0.isAddressZero() ? amount0Max : 0;
-
-        vm.startBroadcast();
-        tokenApprovals();
-
-        // Multicall to atomically create pool & add liquidity
-        positionManager.multicall{value: valueToPass}(params);
+        
+        IPoolManager poolManager = IPoolManager(poolManagerAddress);
+        
+        // sqrtPriceX96 for price 0.0003
+        uint160 sqrtPriceX96 = 1372272028650297984479657984;
+        
+        // [FIXED] এখানে poolKey.toId() এর বদলে সরাসরি poolKey (struct) পাস করা হয়েছে
+        poolManager.initialize(poolKey, sqrtPriceX96);
+        
+        console.log("Pool initialized successfully");
+        
+        // লিকুইডিটি অ্যাড করার সময় আপনার poolId প্রয়োজন হতে পারে, তাই এটি নিচে কমেন্ট করে রাখা হলো:
+        // bytes32 poolId = PoolIdLibrary.toId(poolKey);
+        
         vm.stopBroadcast();
     }
 }
