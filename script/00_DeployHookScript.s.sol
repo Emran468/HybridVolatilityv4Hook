@@ -9,10 +9,10 @@ import {HybridVolatilityHook} from "../src/HybridVolatilityHook.sol";
 
 contract DeployHookScript is Script {
     address constant POOL_MANAGER = 0xE03A1074c86CFeDd5C142C4F04F1a1536e203543;
-    // ✅ CREATE2_FACTORY সরানো হয়েছে — forge-std/Base.sol এ already আছে
+  // ✅ CREATE2_FACTORY has been removed — already present in forge-std/Base.sol
 
     function run() external {
-        // ✅ তোমার সব 8টা permission flag
+        // ✅ All 8 permission flags
         uint160 flags = uint160(
             Hooks.BEFORE_INITIALIZE_FLAG       |
             Hooks.AFTER_INITIALIZE_FLAG        |
@@ -26,7 +26,7 @@ contract DeployHookScript is Script {
 
         bytes memory constructorArgs = abi.encode(POOL_MANAGER);
 
-        // ✅ CREATE2_FACTORY — forge-std থেকে inherited, আলাদা declare লাগবে না
+      // ✅ CREATE2_FACTORY — inherited from forge-std, no separate declaration needed
         (address hookAddress, bytes32 salt) = HookMiner.find(
             CREATE2_FACTORY,
             flags,

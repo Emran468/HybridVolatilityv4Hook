@@ -130,7 +130,7 @@ async function main() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 3: Balance check করো — আগে দেখো Proxy-তে কত আছে
+ // STEP 3: Balance check — first check the Proxy's balance
   // ═══════════════════════════════════════════════════════════════════════
   const token0 = new ethers.Contract(currency0, ERC20_ABI, wallet);
   const token1 = new ethers.Contract(
@@ -152,9 +152,9 @@ async function main() {
   console.log(`│ Proxy  Token1 : ${proxyBal1.toString().padEnd(24)}│`);
   console.log("└─────────────────────────────────────────┘");
 
-  // ─── কত fund করবো calculate করো ──────────────────────────────────────
-  // EURC = 6 decimals, WETH = 18 decimals
-  // Proxy-তে কমপক্ষে এই পরিমাণ থাকতে হবে
+  // ─── Calculate funding amount ──────────────────────────────────────
+// EURC = 6 decimals, WETH = 18 decimals
+// The Proxy must hold at least this amount
   const NEED0 = ethers.parseUnits("1", 6);    // 1 EURC  (6 decimals)
   const NEED1 = ethers.parseUnits("0.01", 18); // 0.01 WETH (18 decimals)
 
@@ -178,7 +178,7 @@ async function main() {
     console.log(`💰 Need to send Token1: ${ethers.formatUnits(toSend1, 18)} WETH`);
 
     if (currency1.toLowerCase() === WETH.toLowerCase()) {
-      // ETH → WETH wrap করো যদি WETH কম থাকে
+    // Wrap ETH to WETH if the WETH balance is low
       if (walletBal1 < toSend1) {
         console.log("🔄 Wrapping ETH to WETH...");
         const ethBal = await provider.getBalance(wallet.address);
@@ -212,11 +212,11 @@ async function main() {
   console.log(`   Token0: ${ethers.formatUnits(finalBal0, 6)} EURC`);
   console.log(`   Token1: ${ethers.formatUnits(finalBal1, 18)} WETH`);
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 4: liquidityDelta — balance অনুযায়ী safe value নাও
-  // ═══════════════════════════════════════════════════════════════════════
-  // 1 EURC = 100_000 units (6 decimals), এর জন্য safe liquidity
-  // liquidityDelta ছোট রাখো — 100_000n = খুব safe
+ // ═══════════════════════════════════════════════════════════════════════
+// STEP 4: liquidityDelta — use a safe value based on balance
+// ═══════════════════════════════════════════════════════════════════════
+// For 1 EURC = 100_000 units (6 decimals), this is a safe liquidity amount
+// Keep liquidityDelta small — 100_000n is very safe
   const liquidityDelta = 100_000n;
 
   console.log(`\n🔢 liquidityDelta: ${liquidityDelta.toString()}`);
@@ -242,7 +242,7 @@ async function main() {
   console.log("\n🚀 Adding liquidity...");
 
   try {
-    // Simulate আগে
+   // Simulate first
     await proxy.addLiquidity.staticCall(data, { gasLimit: 5000000 });
     console.log("✅ Simulation passed!");
 
@@ -251,7 +251,7 @@ async function main() {
     const receipt = await tx.wait();
 
     if (receipt.status === 1) {
-      console.log("\n🎉 সফল! Liquidity add হয়েছে!");
+      console.log("\n🎉 Success! Liquidity added!");
       console.log("📦 Block   :", receipt.blockNumber);
       console.log("⛽ Gas used:", receipt.gasUsed.toString());
       console.log("🔗 Etherscan:", `https://sepolia.etherscan.io/tx/${receipt.hash}`);
@@ -264,7 +264,7 @@ async function main() {
     if (err.reason) console.log("   Reason    :", err.reason);
     console.log("   Message   :", err.message.slice(0, 400));
 
-    // Debug: Proxy balance এখন কত?
+  // Debug: What is the Proxy balance now?
     const dbg0 = await token0.balanceOf(PROXY_ADDRESS);
     const dbg1 = await token1.balanceOf(PROXY_ADDRESS);
     console.log("\n🔍 Debug — Proxy balance at time of failure:");

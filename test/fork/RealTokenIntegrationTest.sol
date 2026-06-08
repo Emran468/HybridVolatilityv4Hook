@@ -2,27 +2,26 @@
 pragma solidity ^0.8.26;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Real ERC-20 Integration Test — WETH + USDC ব্যবহার করে
+// Real ERC-20 Integration Test — Using WETH + USDC
 //
-// চালানোর কমান্ড:
+// Command to run:
 //   forge test --match-contract RealTokenIntegrationTest \
 //              --fork-url $SEPOLIA_RPC -vvvv
 //
-// পরিবর্তনসমূহ (Bug Fixes):
+// Changes (Bug Fixes):
 // 1. test_realToken_rapidSwaps_feeShouldEscalate:
-//    → দুই swap এর মাঝে vm.warp(30) যোগ করা হয়েছে যাতে
-//      timeDelta > 0 হয় এবং fee escalation পরীক্ষা করা যায়।
-//    → assertGt এর বদলে নতুন hook logic অনুযায়ী assertion।
+//    → Added vm.warp(30) between the two swaps so that
+//      timeDelta > 0, allowing fee escalation to be tested.
+//    → Updated the assertion based on the new hook logic instead of standard assertGt.
 //
 // 2. test_realToken_balanceConservation:
-//    → protocol fee এর কারণে exact zero conservation নাও হতে পারে,
-//      তাই tolerance-ভিত্তিক check যোগ করা হয়েছে।
+//    → Exact zero conservation might not occur due to protocol fees,
+//      so a tolerance-based check has been added.
 //
 // 3. test_realToken_addRemoveLiquidity:
-//    → সেপোলিয়া ফোর্কের কারেন্ট একটিভ টিক ডাইনামিকালি রিড করে রেঞ্জ সেট করা হয়েছে,
-//      যাতে ইন-দ্য-মানি (In-the-money) হয়ে টোকেন ব্যালেন্স সঠিকভাবে খরচ হয়।
+//    → The price range is set by dynamically reading the current active tick from the
+//      Sepolia fork to ensure it stays in-the-money so token balances are spent correctly.
 // ─────────────────────────────────────────────────────────────────────────────
-
 import {Test, console2} from "forge-std/Test.sol";
 import {stdStorage, StdStorage} from "forge-std/StdStorage.sol";
 
@@ -340,7 +339,7 @@ contract RealTokenIntegrationTest is Test {
         uint24 feeAfterSwap1;
         uint24 feeAfterSwap2;
 
-        // ─── Swap 1: বড় USDC → WETH (tick অনেক নিচে নামবে) ─────────────
+        // ─── Swap 1: Large USDC → WETH (tick will drop significantly) ───────
         vm.prank(trader);
         swapRouter.swap(
             poolKey,
@@ -355,10 +354,10 @@ contract RealTokenIntegrationTest is Test {
         feeAfterSwap1 = hook.getCurrentFee(poolKey);
         console2.log("Swap 1 fee (basis points):", uint256(feeAfterSwap1));
 
-        // FIX: 30 সেকেন্ড এগিয়ে নেওয়া যাতে timeDelta > 0 হয়
+      // FIX: Advance time by 30 seconds so that timeDelta > 0
         vm.warp(block.timestamp + 30);
 
-        // ─── Swap 2: বিপরীত দিকে WETH → USDC (tick আবার উপরে উঠবে) ─────
+      // ─── Swap 2: Reverse direction WETH → USDC (tick will move back up) ───────
         vm.prank(trader);
         swapRouter.swap(
             poolKey,
@@ -476,74 +475,11 @@ contract RealTokenIntegrationTest is Test {
         assertGe(lastTimestamp, timestampBefore, "lastTimestamp should be updated after swap");
     }
 
-    // ─── Test 7: Add and Remove Liquidity ────────────────────────────────────
-    //
-    // FIX: সেপোলিয়া ফোর্কের কারেন্ট একটিভ টিক ডাইনামিকালি রিড করে রেঞ্জ সেট করা হয়েছে।
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // function test_realToken_addRemoveLiquidity() public {
-    //     address token0Addr = Currency.unwrap(currency0);
-    //     uint256 lpUsdcBefore = IERC20(token0Addr).balanceOf(lp);
-
-    //     console2.log("LP USDC before add:", lpUsdcBefore);
-
-    //     // ─── ডাইনামিক টিক রেঞ্জ ক্যালকুলেশন (FIX) ───────────────────────────
-    //     (, int24 currentTick, , ) = manager.getSlot0(poolKey.toId());
-    //     int24 tickSpacing = poolKey.tickSpacing;
-    //     int24 nearestTick = (currentTick / tickSpacing) * tickSpacing;
-
-    //     int24 tickLower = nearestTick - (tickSpacing * 2); 
-    //     int24 tickUpper = nearestTick + (tickSpacing * 2); 
-
-    //     vm.startPrank(lp);
-
-    //     // ─── Liquidity Add ─────────────────────────────────────────────────
-    //     liquidityRouter.addLiquidity(
-    //         poolKey,
-    //         ModifyLiquidityParams({
-    //             tickLower:      tickLower,
-    //             tickUpper:       tickUpper,
-    //             liquidityDelta:  1000e18,
-    //             salt:            bytes32(uint256(1))
-    //         }),
-    //         lp
-    //     );
-
-    //     uint256 lpUsdcAfterAdd = IERC20(token0Addr).balanceOf(lp);
-    //     console2.log("LP USDC after add:", lpUsdcAfterAdd);
-    //     assertLt(lpUsdcAfterAdd, lpUsdcBefore, "LP should spend USDC when adding liquidity");
-
-    //     // ─── Liquidity Remove ──────────────────────────────────────────────
-    //     liquidityRouter.addLiquidity(
-    //         poolKey,
-    //         ModifyLiquidityParams({
-    //             tickLower:      tickLower,
-    //             tickUpper:       tickUpper,
-    //             liquidityDelta:  -1000e18,                      // negative = remove
-    //             salt:            bytes32(uint256(1))
-    //         }),
-    //         lp
-    //     );
-
-    //     vm.stopPrank();
-
-    //     uint256 lpUsdcAfterRemove = IERC20(token0Addr).balanceOf(lp);
-    //     console2.log("LP USDC after remove:", lpUsdcAfterRemove);
-
-    //     uint256 tolerance = lpUsdcBefore / 10000 + 100e6;
-    //     assertApproxEqAbs(
-    //         lpUsdcAfterRemove,
-    //         lpUsdcBefore,
-    //         tolerance,
-    //         "LP USDC balance should be approximately restored after removing liquidity"
-    //     );
-    // }
-
-    // ─── Test 7: Add and Remove Liquidity ────────────────────────────────────
-    //
-    // FIX: ডাইনামিক রেঞ্জ এখন একটিভ পজিশন হওয়ায় liquidityDelta কমিয়ে 1e14 করা হয়েছে,
-    //      যাতে LP এর USDC ব্যালেন্স (6 decimals) এর ভেতর ট্রানজেকশন সম্পন্ন হয়।
-    // ─────────────────────────────────────────────────────────────────────────
+   // ─── Test 7: Add and Remove Liquidity ────────────────────────────────────
+//
+// FIX: Reduced liquidityDelta to 1e14 since the dynamic range is now an active position,
+//      ensuring the transaction completes within the LP's USDC balance (6 decimals).
+// ─────────────────────────────────────────────────────────────────────────
 
     function test_realToken_addRemoveLiquidity() public {
         address token0Addr = Currency.unwrap(currency0);
@@ -551,16 +487,16 @@ contract RealTokenIntegrationTest is Test {
 
         console2.log("LP USDC before add:", lpUsdcBefore);
 
-        // ১. সেপোলিয়া ফোর্কের কারেন্ট একটিভ টিক ডাইনামিকালি রিড করুন
+       // 1. Dynamically read the current active tick of the Sepolia fork
         (, int24 currentTick, , ) = manager.getSlot0(poolKey.toId());
         int24 tickSpacing = poolKey.tickSpacing;
         int24 nearestTick = (currentTick / tickSpacing) * tickSpacing;
 
-        // ২. কারেন্ট টিককে মাঝখানে রেখে দুই পাশে রেঞ্জ তৈরি করুন
+        // 2. Set the current tick in the middle and create a range on both sides
         int24 tickLower = nearestTick - (tickSpacing * 2); 
         int24 tickUpper = nearestTick + (tickSpacing * 2); 
 
-        // ৩. একটিভ রেঞ্জের জন্য নিরাপদ লিকুইডিটি ডেল্টা সেট করুন (FIX)
+        // 3. Set a safe liquidity delta for the active range (FIX)
         int256 dynamicLiquidityDelta = 1e14; 
 
         vm.startPrank(lp);
@@ -598,7 +534,7 @@ contract RealTokenIntegrationTest is Test {
         uint256 lpUsdcAfterRemove = IERC20(token0Addr).balanceOf(lp);
         console2.log("LP USDC after remove:", lpUsdcAfterRemove);
 
-        // ০.০১% টলারেন্স চেক
+        // 0.01% tolerance check
         uint256 tolerance = lpUsdcBefore / 10000 + 100e6;
         assertApproxEqAbs(
             lpUsdcAfterRemove,

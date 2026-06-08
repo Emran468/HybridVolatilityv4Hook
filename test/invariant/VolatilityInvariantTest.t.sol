@@ -29,10 +29,10 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
     PoolKey poolKey;
 
     function setUp() public {
-        // ১. Uniswap V4 কোর এনভায়রনমেন্ট ডিপ্লয়
+      // 1. Deploy Uniswap V4 core environment
         deployFreshManagerAndRouters();
 
-        // ২. MockToken ডিপ্লয়
+      // 2. Deploy MockToken
         MockToken tokenA = new MockToken("Token A", "TKA");
         MockToken tokenB = new MockToken("Token B", "TKB");
 
@@ -90,7 +90,7 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
             IERC20(Currency.unwrap(currency1))
         );
 
-        // ১০. Handler কে token দাও
+      // 10. Give tokens to the Handler
         deal(Currency.unwrap(currency0), address(handler), type(uint128).max);
         deal(Currency.unwrap(currency1), address(handler), type(uint128).max);
 
@@ -110,10 +110,11 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
     // ─────────────────────────────────────────────────────────────
     // INTERNAL HELPERS
     // ─────────────────────────────────────────────────────────────
-
-    /// @dev পুল এখন min বা max tick boundary তে আছে কিনা চেক করে।
-    /// HookHandler এর atMinBoundary/atMaxBoundary এর উপর নির্ভর না করে
-    /// সরাসরি PoolManager থেকে পড়া হয় — compilation dependency এড়াতে।
+    
+    /// @dev Checks if the pool is currently at the min or max tick boundary.
+    /// Instead of relying on HookHandler's atMinBoundary/atMaxBoundary,
+    /// it reads directly from the PoolManager to avoid compilation dependencies.
+   
     function _isAtBoundary() internal view returns (bool) {
         (, int24 tick, , ) = manager.getSlot0(poolKey.toId());
         return tick <= TickMath.MIN_TICK + 1 || tick >= TickMath.MAX_TICK - 1;
@@ -161,8 +162,8 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         PoolId id = poolKey.toId();
         (, int24 currentTick, , ) = manager.getSlot0(id);
 
-        // ✅ FIX 6: Boundary এ থাকলে sync check skip করো
-        // কারণ boundary swap এ tick মাঝে মাঝে handler sync এর আগেই পরিবর্তন হয়
+        //  Bypass the sync check when at the boundary
+       // because boundary swaps can cause the tick to update before the handler updates its state
         if (_isAtBoundary()) return;
 
         assertEq(currentTick, handler.currentTick(), "State out of sync");
@@ -219,12 +220,12 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         );
     }
 
-    // ✅ FIX 7: Boundary এ থাকলে zero movement check skip করো
-    // কারণ boundary তে পৌঁছানোর swap এ tick delta অনেক বড় হয়
+     //  Skip zero movement check if at the boundary
+// because the tick delta is very large in a swap that reaches the boundary
     function invariant_zeroMovementNoFeeHike() public view {
         if (handler.swapCount() == 0) return;
 
-        // Boundary এ থাকলে এই invariant meaningful না
+      // This invariant is not meaningful when at the boundary
         if (_isAtBoundary()) return;
 
         int24 delta = handler.lastTickDelta();
@@ -237,10 +238,10 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         assertEq(fee, 3000, "Zero movement should result in BASE_FEE");
     }
 
-    // ✅ FIX: Gas limit 1_500_000 — Uniswap storage init + hook logic সব মিলিয়ে
+  
     function invariant_hookGasEfficiency() public view {
         if (handler.swapCount() > 0) {
-            // প্রথম ২টি swap এ storage initialization এর জন্য gas বেশি লাগে
+            // The first 2 swaps consume more gas due to storage initialization
             if (handler.swapCount() < 3) return;
             assertLe(
                 handler.lastSwapGasUsed(),

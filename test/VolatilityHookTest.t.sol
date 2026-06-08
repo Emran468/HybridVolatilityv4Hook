@@ -20,28 +20,28 @@ contract VolatilityHookTest is Test, Deployers {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
-    // ✅ FIX 1: শুধু hook declare করতে হবে
-    // PoolKey key → Deployers base contract এ আগে থেকেই আছে, তাই এখানে দিলে conflict হয়
+    // hook declare 
+   
     HybridVolatilityHook hook;
 
     function setUp() public {
-        // ১. টাইম ওয়ার্প (Timestamp 0 এর ঝামেলা এড়াতে)
+       // 1. Time warp (To avoid Timestamp 0 issues)
         vm.warp(100);
 
-        // ২. Core system ডেপ্লয় করা
-        // এই function: manager, swapRouter, modifyLiquidityRouter সেট করে
+         // 2. Deploy core system
+        // This function sets up: manager, swapRouter, and modifyLiquidityRouter
         deployFreshManagerAndRouters();
 
-        // ✅ FIX 2: deployAndMint2Tokens() → deployMintAndApprove2Currencies()
-        // Deployers contract এ সঠিক function নামটি এটি
-        // এটি currency0 এবং currency1 তৈরি করে এবং mint করে
+       
+        // This is the correct function name in the Deployers contract
+        // It creates and mints currency0 and currency1
         deployMintAndApprove2Currencies();
 
-        // ৩. Approve — Pool Manager কে token transfer এর অনুমতি দেওয়া
+       // 3. Approve — Allow the Pool Manager to transfer tokens
         IERC20(Currency.unwrap(currency0)).approve(address(manager), type(uint256).max);
         IERC20(Currency.unwrap(currency1)).approve(address(manager), type(uint256).max);
 
-        // ৪. হুকের সব প্রয়োজনীয় ফ্ল্যাগ সেট করা
+       // 4. Set all required flags for the hook
         uint160 flags = uint160(
             Hooks.BEFORE_INITIALIZE_FLAG |
             Hooks.AFTER_INITIALIZE_FLAG |
@@ -53,7 +53,7 @@ contract VolatilityHookTest is Test, Deployers {
             Hooks.AFTER_SWAP_FLAG
         );
 
-        // ৫. HookMiner দিয়ে সঠিক salt বের করে CREATE2 এর মাধ্যমে hook deploy করা
+      // 5. Find the correct salt using HookMiner and deploy the hook via CREATE2
         (address predictedHook, bytes32 salt) = HookMiner.find(
             address(this),
             flags,
@@ -61,26 +61,26 @@ contract VolatilityHookTest is Test, Deployers {
             abi.encode(manager)
         );
 
-        // ✅ এখন hook properly declared, তাই কাজ করবে
+       // here we deploy the hook using the predicted salt to ensure it lands at the expected address
         hook = new HybridVolatilityHook{salt: salt}(manager);
         require(address(hook) == predictedHook, "Hook address mismatch");
 
-        // ৬. PoolKey তৈরি করা
-        // ✅ FIX: DYNAMIC_FEE_FLAG | 3000 = 8391608 → LPFeeTooLarge error দেয়
-        // Dynamic fee pool এ শুধু DYNAMIC_FEE_FLAG দিতে হয়, static fee যোগ করা যাবে না
+        // 6 to make  PoolKey 
+       
+        // Dynamic fee pool এ শুধু DYNAMIC_FEE_FLAG 
         key = PoolKey({
             currency0: currency0,
             currency1: currency1,
-            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG, // শুধু এটুকুই, | 3000 নয়
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG, 
             tickSpacing: 60,
             hooks: IHooks(address(hook))
         });
 
-        // ৭. পুল initialize করা
+        // 7initialized pool
         manager.initialize(key, SQRT_PRICE_1_1);
         PoolId poolId = key.toId();
 
-        // ৮. হুকের স্টেট initialize করা (vm.store দিয়ে mocking)
+       // 8. Initialize the hook state (mocking with vm.store)
         bytes32 isInitializedSlot = keccak256(abi.encode(poolId, uint256(2)));
         vm.store(address(hook), isInitializedSlot, bytes32(uint256(1)));
 

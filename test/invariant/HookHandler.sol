@@ -145,15 +145,15 @@ contract HookHandler is CommonBase, StdCheats, StdUtils, Test, IUnlockCallback {
         return false;
     }
 
-    // ✅ FIX: int256.min overflow এড়াতে amount আগে clamp করা হচ্ছে
-    // -type(int256).min কে uint256 এ cast করলে overflow হয়
+    // ✅ FIX: int256.min overflow
+    // _type(int256).min কে uint256 এ cast করলে overflow হয়
     function _doSwap(bool zeroForOne, int256 amount) internal returns (bool success) {
         // Boundary blocked হলে swap skip করো
         if (_isBoundaryBlocked(zeroForOne)) {
             return false;
         }
 
-        // int256.min special case — abs নেওয়া যায় না, তাই replace করো
+        // int256.min special case — abs নেওয়া যায় না, 
         if (amount == type(int256).min) {
             amount = type(int256).min + 1;
         }

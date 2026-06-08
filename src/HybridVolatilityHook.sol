@@ -182,14 +182,14 @@ contract HybridVolatilityHook is BaseHook {
         (, int24 postSwapTick, , ) = poolManager.getSlot0(poolId);
         int24 preSwapTick = preSwapTicks[poolId];
 
-        // ৩. এই নির্দিষ্ট সোয়াপটি প্রাইসকে কতটা মুভ করিয়েছে (Volatilty) তা হিসাব করি
+       // 3. Calculate how much this specific swap moved the price (volatility)
         int256 rawDelta  = int256(postSwapTick) - int256(preSwapTick);
         int24 tickDelta = rawDelta < 0 ? int24(-rawDelta) : int24(rawDelta);
 
-        // ৪. এই সোয়াপের ইমপ্যাক্ট অনুযায়ী পরবর্তী সোয়াপের জন্য নতুন ফি লেভেল হিসাব করি
+       // 4. Calculate the new fee level for the next swap based on this swap's impact
         uint24 feeToSave = _computeFee(tickDelta, 0);
 
-        // ৫. পরবর্তী সোয়াপের জন্য ফি এবং স্টেট আপডেট করি
+        // 5. Update the fee and state for the next swap
         poolFees[poolId] = feeToSave;
         poolHistory[poolId] = PoolState({ lastTick: postSwapTick, lastTimestamp: block.timestamp });
 

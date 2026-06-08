@@ -1,9 +1,9 @@
 const { ethers } = require("ethers");
 
-const PRIVATE_KEY          = "0xff2fc42f64114cc432a27a8290b0c9b8e9fe2ebc3afdde90863ddff6051ed3fc";
-const RPC_URL              = "https://eth-sepolia.g.alchemy.com/v2/Vur31q2MBSuF6HB7nzKL_";
+const PRIVATE_KEY          = YOUR_PRIVATE_KEY;
+const RPC_URL              = "https://ethereum-sepolia-rpc.publicnode.com";
 
-// ✅ আপনার বর্তমান সঠিক অ্যাড্রেসসমূহ
+
 const HOOK_ADDRESS         = "0xF9c2Ec66C5D7a8CEaf8d2d8122fA4f07249CBFC0"; 
 const POOL_MANAGER_ADDRESS = "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543";
 const EURC                 = "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4";
@@ -44,13 +44,13 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════════════
   const zeroForOne = true; 
   
-  // ০.৫ EURC সোয়াপ করব = 500,000 units (6 decimals)
+// Swap 0.5 EURC = 500,000 units (6 decimals)
   const amountToSwap = ethers.parseUnits("0.5", 6);
   const amountSpecified = -BigInt(amountToSwap); 
 
-  // ✅ ইউনিসোয়াপ v4 স্ট্যান্ডার্ড অনুযায়ী সেফ বাউন্ডারি সেট (getSlot0 এর ঝামেলা ছাড়া)
-  // zeroForOne = true হলে দাম কমবে, তাই সর্বনিম্নের ঠিক উপরে বাউন্ডারি।
-  // zeroForOne = false হলে দাম বাড়বে, তাই সর্বোচ্চ সীমার ঠিক নিচে বাউন্ডারি।
+// ✅ Set safe boundaries according to Uniswap v4 standards (without getSlot0 overhead)
+// If zeroForOne = true, price decreases, so the boundary is set just above the minimum.
+// If zeroForOne = false, price increases, so the boundary is set just below the maximum.
   const sqrtPriceLimitX96 = zeroForOne 
     ? 4295128740n                                    // TickMath.MIN_SQRT_PRICE + 1
     : 1461446703485210103287273052203988822378723970341n; // TickMath.MAX_SQRT_PRICE - 1
@@ -101,7 +101,7 @@ async function main() {
     const receipt = await tx.wait();
 
     if (receipt.status === 1) {
-      console.log("\n🎉 সফল! Swap সম্পন্ন হয়েছে!");
+      console.log("\n🎉Success! Swap completed!");
       console.log("📦 Block   :", receipt.blockNumber);
       console.log("⛽ Gas used:", receipt.gasUsed.toString());
       console.log("🔗 Etherscan:", `https://sepolia.etherscan.io/tx/${receipt.hash}`);

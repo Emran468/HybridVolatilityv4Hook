@@ -80,7 +80,7 @@ contract V4LiquiditySystem {
             emit Log("token1 settled");
         }
 
-        // ✅ TAKE — positive delta থাকলে ফেরত নাও
+        // ✅ TAKE — positive delta 
         if (amount0 > 0) {
             poolManager.take(currency0, address(this), uint128(amount0));
         }

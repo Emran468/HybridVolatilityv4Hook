@@ -7,13 +7,13 @@ const POOL_MANAGER_ADDRESS        = "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543"
 const EURC_ADDRESS                = "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4";
 const WETH_ADDRESS                = "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14";
 
-// আপনার সর্বশেষ ভেরিফাইড হুক অ্যাড্রেস
+//Hook address
 const HOOK_ADDRESS                = "0xF9c2Ec66C5D7a8CEaf8d2d8122fA4f07249CBFC0";
 
 const FEE                         = 8388608; // Dynamic Fee Flag + 3000 base fee
 const TICK_SPACING                = 60;
 
-// 🚨 FIX: Ethers v6 এর অবজেক্ট প্যারামিটার রিড করার সুবিধার্থে ইন্টারফেইস স্পষ্ট করা হলো
+// 🚨 FIX: Clarified the interface for easier reading of Ethers v6 object parameters
 const POOL_MANAGER_ABI = [
   {
     "inputs": [
@@ -49,7 +49,7 @@ async function main() {
   const token0 = EURC_ADDRESS.toLowerCase() < WETH_ADDRESS.toLowerCase() ? EURC_ADDRESS : WETH_ADDRESS;
   const token1 = EURC_ADDRESS.toLowerCase() < WETH_ADDRESS.toLowerCase() ? WETH_ADDRESS : EURC_ADDRESS;
 
-  // 🚨 FIX: অ্যারের পরিবর্তে কড়াভাবে Named Object পাস করা হলো
+// Strictly passed a named object instead of an array
   const poolKey = {
     currency0: ethers.getAddress(token0),
     currency1: ethers.getAddress(token1),
@@ -72,11 +72,11 @@ async function main() {
   const poolManager = new ethers.Contract(POOL_MANAGER_ADDRESS, POOL_MANAGER_ABI, wallet);
 
   try {
-    // 🚨 🧪 অল্টারনেটিভ চেক: যদি estimateGas ইকোনমি এরর দেয়, আমরা সরাসরি গ্যাস লিমিট হার্ডকোড করে ট্রানজেকশন পাঠাবো
+  // Alternative check: If estimateGas throws an error, we will directly hardcode the gas limit and send the transaction
     console.log("⏳ Bypassing estimateGas and sending transaction directly to ensure execution...");
     
     const tx = await poolManager.initialize(poolKey, sqrtPriceX96, {
-      gasLimit: 1000000 // পর্যাপ্ত গ্যাস বাফার দিয়ে সরাসরি পুশ
+      gasLimit: 1000000 // Push directly with a sufficient gas buffer
     });
 
     console.log(`🚀 Transaction Broadcasted! Hash: ${tx.hash}`);
