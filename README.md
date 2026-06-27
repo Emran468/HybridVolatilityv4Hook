@@ -1,6 +1,8 @@
-# HybridVolatilityv4Hook
+# AegisHook — HybridVolatilityv4Hook
 
-> A production-grade Uniswap v4 Hook providing real-time dynamic fee adjustment and on-chain MEV/sandwich attack protection — deployed and verified on Unichain Sepolia.
+> **AegisHook** is a production-grade Uniswap v4 Hook providing real-time dynamic fee adjustment and on-chain MEV/sandwich attack protection — deployed and verified on Unichain Sepolia.
+>
+> *Aegis: the impenetrable shield of Zeus — protecting liquidity providers from volatility and MEV attackers.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.26-blue)](https://soliditylang.org/)
@@ -26,7 +28,8 @@
 
 ```
 Ran 12 tests  — SandwichSecurityTest      ✅ 12 passed
-Ran 51 tests  — VolatilityHookTest        ✅ 51 passed
+Ran 46 tests  — VolatilityHookTest (unit) ✅ 46 passed
+Ran  5 tests  — VolatilityHookTest (fuzz) ✅  5 passed
 Ran 24 tests  — VolatilityInvariantTest   ✅ 24 passed
 Ran  7 tests  — SimulateHistoryTest       ✅  7 passed
 Ran  7 tests  — EasyPosmTest + liquidity  ✅  7 passed
@@ -59,13 +62,13 @@ Total: 10 fork tests passed, 0 failed
 
 ## Overview
 
-HybridVolatilityHook solves two critical problems for liquidity providers on Uniswap v4:
+AegisHook (contract: `HybridVolatilityHook`) solves two critical problems for liquidity providers on Uniswap v4:
 
 **Problem 1 — Static Fees:** Traditional AMMs charge fixed fees (0.05%, 0.3%, 1%) regardless of market conditions. During high volatility, LPs absorb impermanent loss without adequate fee compensation.
 
 **Problem 2 — MEV & Sandwich Attacks:** Malicious bots systematically front-run and back-run swaps within a single block, extracting value from LPs and ordinary traders. This costs DeFi users hundreds of millions of dollars annually.
 
-This hook addresses both problems in a single composable contract with no external dependencies beyond the Uniswap v4 core.
+AegisHook addresses both problems in a single composable contract with no external dependencies beyond the Uniswap v4 core.
 
 ---
 
@@ -125,7 +128,7 @@ On any swap:
 ## Architecture
 
 ```
-HybridVolatilityHook
+HybridVolatilityHook (AegisHook)
 │
 ├── beforeSwap()
 │     ├── Composability guard (EIP-1153 dirty flag check)
@@ -248,6 +251,10 @@ forge script script/DeployUnichainSepolia.s.sol \
   --private-key $PRIVATE_KEY
 ```
 
+---
+
+## Configuration
+
 ```solidity
 // Owner-only — can be called at any time
 hook.setTickThresholds(
@@ -292,7 +299,7 @@ event DeployedOnChain(uint256 indexed chainId, string chainName, uint64 blockDec
 | `VolatilityInvariantTest` | 24 | Invariant (256 runs × 6400 calls each) |
 | `SimulateHistoryTest` | 7 | Simulation |
 | `RealTokenIntegrationTest` | 10 | Fork — Live Unichain Sepolia |
-| **Total** | **104+** | |
+| **Total** | **111** | |
 
 ---
 
@@ -317,7 +324,3 @@ MIT — see [LICENSE](./LICENSE)
 **Md Emran** — Independent blockchain developer, Bangladesh
 GitHub: [@Emran468](https://github.com/Emran468)
 Contract: [`0xA8B74ADfA5558F27A7c9983D14a302aBE13575c0`](https://unichain-sepolia.blockscout.com/address/0xA8B74ADfA5558F27A7c9983D14a302aBE13575c0)
-
----
----
-
