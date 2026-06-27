@@ -45,22 +45,21 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         }
 
         uint160 flags = uint160(
-            Hooks.BEFORE_INITIALIZE_FLAG   |
-            Hooks.AFTER_INITIALIZE_FLAG    |
-            Hooks.AFTER_ADD_LIQUIDITY_FLAG |
+            Hooks.BEFORE_INITIALIZE_FLAG      |
+            Hooks.AFTER_INITIALIZE_FLAG       |
+            Hooks.AFTER_ADD_LIQUIDITY_FLAG    |
             Hooks.AFTER_REMOVE_LIQUIDITY_FLAG |
-            Hooks.BEFORE_SWAP_FLAG         |
+            Hooks.BEFORE_SWAP_FLAG            |
             Hooks.AFTER_SWAP_FLAG
         );
 
         (address hookAddress, bytes32 salt) = HookMiner.find(
             address(this), flags,
             type(HybridVolatilityHook).creationCode,
-              abi.encode(manager, address(this))
+            abi.encode(manager, address(this))
         );
 
-       hook = new HybridVolatilityHook{salt: salt}(manager, address(this));
-
+        hook = new HybridVolatilityHook{salt: salt}(manager, address(this));
         require(address(hook) == hookAddress, "Mined address mismatch");
 
         poolKey = PoolKey({
@@ -164,7 +163,6 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         assertGe(c0 + c1, 0, "Balances should exist");
     }
 
-    // ✅ MEV_PENALTY_FEE যোগ করা হয়েছে
     function invariant_volatilityFeeLogic() public view {
         if (!handler.isPoolActive()) return;
         if (handler.swapCount() == 0) return;
@@ -172,14 +170,12 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         assertTrue(_isValidFee(fee), "INVALID FEE STATE");
     }
 
-    // ✅ Block-based decay — MEV fee ও decay হয়
     function invariant_resetToBaseFeeAfterLongTime() public view {
         if (handler.getSwapCount() == 0) return;
         uint256 timeSince = handler.getTimeSinceLastSwap();
         if (timeSince <= 300) return;
         uint24 fee = hook.getCurrentFee(poolKey);
-        assertEq(fee, BASE_FEE,
-            "Should reset to BASE_FEE after decay window");
+        assertEq(fee, BASE_FEE, "Should reset to BASE_FEE after decay window");
     }
 
     function invariant_tickAlwaysInBounds() public view {
@@ -190,7 +186,6 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
         );
     }
 
-    // ✅ MEV_PENALTY_FEE allowed — zero movement এও sandwich penalty থাকতে পারে
     function invariant_zeroMovementNoFeeHike() public view {
         if (handler.swapCount() == 0) return;
         if (_isAtBoundary()) return;
@@ -205,11 +200,9 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
 
     function invariant_hookGasEfficiency() public view {
         if (handler.swapCount() < 3) return;
-        assertLe(handler.lastSwapGasUsed(), 1_500_000,
-            "Gas explosion in hook logic!");
+        assertLe(handler.lastSwapGasUsed(), 1_500_000, "Gas explosion in hook logic!");
     }
 
-    // ✅ সম্পূর্ণ fix — 100000 সব জায়গায়, sandwich fee skip করা হয়
     function invariant_feeMatchesVolatility() public view {
         if (handler.swapCount() == 0) return;
         if (!hook.isInitialized(poolKey)) return;
@@ -226,8 +219,6 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
 
         if (_isAtBoundary()) return;
         if (absDelta > 100000) return;
-
-        // ✅ Sandwich penalty থাকলে volatility logic skip
         if (hookFee == MEV_PENALTY_FEE) return;
 
         if (timeDelta >= 300) {
@@ -274,25 +265,21 @@ contract VolatilityInvariantTest is StdInvariant, Deployers {
     function invariant_timestampMonotonic() public view {
         uint256 lastTimestamp = handler.lastSwapTimestamp();
         if (lastTimestamp > 0) {
-            assertGe(block.timestamp, lastTimestamp,
-                "Timestamp moved backwards!");
+            assertGe(block.timestamp, lastTimestamp, "Timestamp moved backwards!");
         }
     }
 
-    // ✅ 100000 যোগ করা হয়েছে
     function invariant_feeAlwaysInValidRange() public view {
         if (handler.swapCount() == 0) return;
         uint24 fee = hook.getCurrentFee(poolKey);
         assertTrue(_isValidFee(fee), "Fee not in allowed tiers!");
     }
 
-    // ✅ block-based: timeSince >= 300 এ fee = BASE_FEE
     function invariant_volatilityDecaysOverTime() public view {
         if (handler.getSwapCount() == 0) return;
         if (handler.getTimeSinceLastSwap() < 300) return;
         uint24 fee = hook.getCurrentFee(poolKey);
-        assertEq(fee, BASE_FEE,
-            "Volatility must decay to BASE_FEE after long time");
+        assertEq(fee, BASE_FEE, "Volatility must decay to BASE_FEE after long time");
     }
 
     function invariant_ghostLiquidityConservation() public view {

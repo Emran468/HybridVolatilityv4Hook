@@ -1,18 +1,26 @@
-# Compiler files
+# Compiler & Build files
 cache/
 out/
 
-# Ignores development (and goerli) broadcast logs
-!/broadcast
-/broadcast/*/31337/
-/broadcast/*/5/
-/broadcast/**/dry-run/
-
-# Docs
-docs/
-
-# Dotenv file
+# Environment
 .env
 
-# Node modules
+# Dependencies
 node_modules/
+
+# Broadcast & Logs
+broadcast/
+
+# Ignore specific files
+addLiquidity.js
+addUnichainLiquidty.js
+unichainproxy.js
+swap.js
+proxydeploy.js
+standard-input.json
+V4LiquiditySystem.sol
+00_DeployHookScript.s.sol
+
+# System files
+.DS_Store
+*.log

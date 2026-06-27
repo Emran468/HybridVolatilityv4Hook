@@ -137,7 +137,6 @@ contract HookHandler is CommonBase, StdCheats, StdUtils, Test, IUnlockCallback {
         }
     }
 
-    // ✅ FIX 2: Boundary check — যদি ইতিমধ্যে boundary তে থাকি এবং একই দিকে swap করতে চাই, skip করো
     function _isBoundaryBlocked(bool zeroForOne) internal view returns (bool) {
         (, int24 tick, ,) = manager.getSlot0(key.toId());
         if (zeroForOne && tick <= TickMath.MIN_TICK + 1) return true;
@@ -145,15 +144,9 @@ contract HookHandler is CommonBase, StdCheats, StdUtils, Test, IUnlockCallback {
         return false;
     }
 
-    // ✅ FIX: int256.min overflow
-    // _type(int256).min কে uint256 এ cast করলে overflow হয়
     function _doSwap(bool zeroForOne, int256 amount) internal returns (bool success) {
-        // Boundary blocked হলে swap skip করো
-        if (_isBoundaryBlocked(zeroForOne)) {
-            return false;
-        }
+        if (_isBoundaryBlocked(zeroForOne)) return false;
 
-        // int256.min special case — abs নেওয়া যায় না, 
         if (amount == type(int256).min) {
             amount = type(int256).min + 1;
         }

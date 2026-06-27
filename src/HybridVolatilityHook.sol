@@ -598,20 +598,4 @@ constructor(IPoolManager _poolManager, address _owner) BaseHook(_poolManager) Ow
         emit ThresholdsUpdated(high, mid, sandwichThreshold);
     }
 
-    /// @dev TESTING ONLY — remove before mainnet audit
-function setHistoryForTest(
-    PoolKey calldata key, int24 tick, uint256 blockNumber
-) external onlyOwner {
-    require(blockNumber <= block.number, "Cannot set future block");
-    PoolId poolId = key.toId();
-    poolStates[poolId] = PackedPoolState({
-        lastTick:      tick,
-        fee:           BASE_FEE,
-        lastBlock:     uint64(blockNumber > 0 ? blockNumber : block.number),
-        lastTimestamp: uint64(block.timestamp),
-        initialized:   true
-    });
-    emit HistoryUpdated(poolId, tick, blockNumber, block.timestamp);
-}
-
 }
